@@ -1,0 +1,27 @@
+name: Tag Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: Create version tag
+    if: github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'update-upstream-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Create tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${GITHUB_HEAD_REF#update-upstream-}"
+          tag="${version}-bsd"
+          echo "Creating tag: $tag"
+          gh release create "$tag" --title "picolibc ${version} (BSD)" --notes "Based on upstream picolibc ${version}"

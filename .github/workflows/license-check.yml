@@ -1,0 +1,92 @@
+name: License Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scancode:
+    name: Scancode License Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install scancode-toolkit
+        run: pip install 'scancode-toolkit==32.3.0'
+
+      - name: Scan licenses
+        run: |
+          scancode \
+            --license \
+            --license-policy license-policy.yml \
+            --only-findings \
+            --processes "$(nproc)" \
+            --json-pp scancode-results.json \
+            --ignore ".git/*" \
+            --ignore ".github/*" \
+            --ignore "scripts/import-upstream.sh" \
+            --ignore "COPYLEFT_EXCLUSIONS" \
+            --ignore "COPYING.picolibc" \
+            --ignore "find-copyright" \
+            --ignore "license-policy.yml" \
+            --ignore "*/README" \
+            --ignore "README.md" \
+            --ignore "README.upstream.md" \
+            .
+
+      - name: Check for unapproved licenses
+        run: |
+          jq -r '
+            [.files[]
+              | select(.license_detections | length > 0)
+              | {
+                  path,
+                  detected_license_expression_spdx,
+                  approved_keys: [.license_policy[]?.license_key],
+                  detected_keys: ([.license_detections[].matches[].license_expression]
+                    | map(split(" AND ") | .[])
+                    | map(split(" OR ") | .[])
+                    | unique)
+                }
+              | .unapproved = (.detected_keys - .approved_keys)
+              | select(.unapproved | length > 0)]
+            | if length > 0 then
+                "Unapproved licenses found:",
+                (.[] | "  \(.path): \(.unapproved | join(", "))"),
+                halt_error(1)
+              else
+                "All detected licenses are approved."
+              end
+          ' scancode-results.json
+
+      - name: Print detected licenses
+        if: always()
+        run: |
+          jq -r '[.files[].license_detections[].license_expression_spdx] | unique | sort | .[]' scancode-results.json
+
+      - name: Upload scancode results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scancode-results
+          path: scancode-results.json
+
+  exclusions-check:
+    name: Copyleft Exclusions Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify excluded paths do not exist
+        run: |
+          awk '!/^#/ && NF { if (system("test ! -e " $0)) { print "ERROR: Excluded file found: " $0; exit 1 } }' COPYLEFT_EXCLUSIONS
+          echo "All excluded paths are absent from the tree."

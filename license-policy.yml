@@ -1,0 +1,96 @@
+# Allowlist of approved permissive licenses found in picolibc.
+# Any license not listed here will be flagged as unapproved.
+license_policies:
+  - license_key: apache-2.0
+    label: Approved
+    policy: approved
+  - license_key: boost-1.0
+    label: Approved
+    policy: approved
+  - license_key: bsd-2-clause-views
+    label: Approved
+    policy: approved
+  - license_key: bsd-new
+    label: Approved
+    policy: approved
+  - license_key: bsd-simplified
+    label: Approved
+    policy: approved
+  - license_key: bsd-source-code
+    label: Approved
+    policy: approved
+  - license_key: bsd-unchanged
+    label: Approved
+    policy: approved
+  - license_key: bsd-unmodified
+    label: Approved
+    policy: approved
+  - license_key: bsla-no-advert
+    label: Approved
+    policy: approved
+  - license_key: clear-bsd
+    label: Approved
+    policy: approved
+  - license_key: codesourcery-2004
+    label: Approved
+    policy: approved
+  - license_key: delorie-historical
+    label: Approved
+    policy: approved
+  - license_key: flex-2.5
+    label: Approved
+    policy: approved
+  - license_key: fsf-unlimited-no-warranty
+    label: Approved
+    policy: approved
+  - license_key: gregory-pietsch
+    label: Approved
+    policy: approved
+  - license_key: hp-1986
+    label: Approved
+    policy: approved
+  - license_key: intel-osl-1993
+    label: Approved
+    policy: approved
+  - license_key: isc
+    label: Approved
+    policy: approved
+  - license_key: markus-kuhn-license
+    label: Approved
+    policy: approved
+  - license_key: martin-birgmeier
+    label: Approved
+    policy: approved
+  - license_key: mit
+    label: Approved
+    policy: approved
+  - license_key: newlib-historical
+    label: Approved
+    policy: approved
+  - license_key: other-permissive
+    label: Approved
+    policy: approved
+  - license_key: proprietary-license
+    label: Approved
+    policy: approved
+  - license_key: public-domain
+    label: Approved
+    policy: approved
+  - license_key: red-hat-attribution
+    label: Approved
+    policy: approved
+  - license_key: standard-ml-nj
+    label: Approved
+    policy: approved
+  - license_key: sunpro
+    label: Approved
+    policy: approved
+  - license_key: unknown-license-reference
+    label: Approved
+    policy: approved
+  - license_key: x11-lucent
+    label: Approved
+    policy: approved
+  - license_key: x11-oar
+    label: Approved
+    policy: approved
