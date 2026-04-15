@@ -1,0 +1,86 @@
+name: Update from Upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      to_ref:
+        description: "Upstream version tag to import up to, e.g., 1.9.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Import Upstream Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Import upstream commits
+        id: import
+        run: |
+          # Auto-detect from_ref: find latest *-bsd tag, strip suffix to get upstream ref
+          from=$(git tag -l '*-bsd' --sort=-v:refname | head -1 | sed 's/-bsd$//')
+          if [ -z "$from" ]; then
+            echo "No *-bsd tags found. Tag the initial import first (e.g., git tag 1.8.11-bsd)." >&2
+            exit 1
+          fi
+          target="${{ inputs.to_ref }}"
+
+          branch="update-upstream-${target}"
+          git branch -D "$branch" 2>/dev/null || true
+          git push origin --delete "$branch" 2>/dev/null || true
+          git checkout -b "$branch"
+
+          scripts/import-upstream.sh "$from" "$target" 2>&1 | tee import-log.txt
+
+          imported=$(grep -oP 'Imported: \K[0-9]+' import-log.txt || echo "0")
+          echo "imported=$imported" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "from=$from" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update PR
+        if: steps.import.outputs.imported != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ inputs.to_ref }}
+          BRANCH: ${{ steps.import.outputs.branch }}
+          FROM: ${{ steps.import.outputs.from }}
+        run: |
+          git push origin "$BRANCH"
+
+          # Generate PR body
+          cat > pr-body.md <<EOF
+          ## Upstream Update: picolibc ${TARGET}
+
+          **Upstream compare**: [${FROM:0:12}...${TARGET}](https://github.com/picolibc/picolibc/compare/${FROM:0:12}...${TARGET})
+
+          ### Imported commits
+          $(git log --oneline main..HEAD | head -50)
+
+          ### Checklist
+          - [ ] Review imported commits
+          - [ ] Verify license scan passes
+          - [ ] Update version table in README.md
+          - [ ] Merge with **rebase** to preserve commit history
+          - [ ] After merge, tag will be created automatically
+          EOF
+
+          existing_pr=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [[ -n "$existing_pr" ]]; then
+            gh pr edit "$existing_pr" --title "Update from upstream picolibc ${TARGET}" --body-file pr-body.md
+          else
+            gh pr create --base main --head "$BRANCH" --title "Update from upstream picolibc ${TARGET}" --body-file pr-body.md
+          fi

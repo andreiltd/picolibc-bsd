@@ -1,0 +1,15 @@
+# Copyleft Exclusions
+#
+# Files excluded from this fork because they are under copyleft licenses.
+# Used by scripts/import-upstream.sh and CI license checks.
+# One path per line. Lines starting with # are comments.
+
+# GPL-2.0-or-later: Printf test suite by Bart Massey
+test/test-stdio/test-printf.c
+test/test-stdio/test-printf-testcases.h
+
+# AGPL-3.0-or-later: Meson cross-file generator script
+scripts/GeneratePicolibcCrossFile.sh
+
+# GPL-2.0-only: GPL license text file
+COPYING.GPL2

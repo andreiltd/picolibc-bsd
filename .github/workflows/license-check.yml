@@ -1,0 +1,73 @@
+name: License Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scancode:
+    name: Scancode License Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install scancode-toolkit
+        run: pip install 'scancode-toolkit==32.3.0'
+
+      - name: Scan licenses
+        run: |
+          scancode \
+            --license \
+            --license-policy license-policy.yml \
+            --only-findings \
+            --processes "$(nproc)" \
+            --json-pp scancode-results.json \
+            --ignore ".git/*" \
+            --ignore ".github/*" \
+            --ignore "scripts/import-upstream.sh" \
+            --ignore "COPYLEFT_EXCLUSIONS" \
+            --ignore "COPYING.picolibc" \
+            --ignore "find-copyright" \
+            --ignore "README.md" \
+            --ignore "README.upstream.md" \
+            .
+
+      - name: Check for forbidden licenses
+        run: |
+          jq -r '
+            [.files[] | select(.license_policy[]?.policy == "forbidden")]
+            | if length > 0 then
+                "Forbidden licenses found:",
+                (.[] | "  \(.path): \(.detected_license_expression_spdx)"),
+                halt_error(1)
+              else
+                "No forbidden licenses found."
+              end
+          ' scancode-results.json
+
+      - name: Upload scancode results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scancode-results
+          path: scancode-results.json
+
+  exclusions-check:
+    name: COPYLEFT_EXCLUSIONS Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify excluded paths do not exist
+        run: |
+          awk '!/^#/ && NF { if (system("test ! -e " $0)) { print "ERROR: Excluded file found: " $0; exit 1 } }' COPYLEFT_EXCLUSIONS
+          echo "All excluded paths are absent from the tree."
